@@ -17,49 +17,12 @@
 #define SERVER_PORT 27016
 #define BUFFER_SIZE 256
 
-int rear = - 1;
-int front = - 1;
-int count = 0;
-
-VEST dataBuffer[10*sizeof(VEST)];
-
-
-void insert(VEST vest)
-{
-
-if(rear == 9)
-printf("Queue Overflow n");
-else
-{
-if(front== - 1)
-front = 0;
-rear = rear + 1;
-dataBuffer[rear] = vest;
-}
-}
-
-
-void delete(VEST vest)
-{
-if(front == - 1 || front > rear)
-{
-printf("Queue Underflow n");
-return;
-}
-else
-{
-printf("Element deleted from queue is : %s\n", dataBuffer[front].poruka);
-front = front + 1;
-}
-}
-
-
-
-
 // TCP server that use blocking sockets
 int main()
 {
     VEST v;
+    VEST dataBuffer[10*sizeof(VEST)];
+
     // Socket used for listening for new clients 
     SOCKET listenSocket = INVALID_SOCKET;
 
@@ -68,6 +31,7 @@ int main()
 
     // Variable used to store function return value
     int iResult;
+    int count = 0;
 
     // Buffer used for storing incoming data
     //VEST dataBuffer[10*sizeof(VEST)];
@@ -157,7 +121,7 @@ int main()
             if (iResult > 0)	// Check if message is successfully received
             {
                 //memset(dataBuffer,0,sizeof(VEST));
-                insert(v);
+                insert(v, &dataBuffer);
                 count++;
                 // Log message text
                 
@@ -166,11 +130,11 @@ int main()
             {
                 // Connection was closed successfully
 
-                for(int i = 0; i < count;i++)
+                for(int i = 0; i < count; i++)
                 {
                     printf("THEME: %s\n", dataBuffer[i].tema);
                     printf("MESSAGE: %s\n",dataBuffer[i].poruka);
-                    delete(dataBuffer[i]);
+                    delete(dataBuffer[i], &dataBuffer);
                 }
                 printf("Connection with client  %s : %d  closed.\n",inet_ntoa(clientAddr.sin_addr), ntohs(clientAddr.sin_port));
                 closesocket(acceptedSocket);
