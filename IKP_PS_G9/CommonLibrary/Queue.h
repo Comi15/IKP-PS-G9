@@ -36,6 +36,11 @@ MESSAGE_QUEUE* CreateMessageQueue(int capacity) {
 	return queue;
 }
 
+void ExpandQueue(SUBSCRIBER_QUEUE* queue) {
+	queue->subArray = (TOPIC_SUBSCRIBERS*)realloc(queue->subArray, queue->size * (sizeof(TOPIC_SUBSCRIBERS)) + sizeof(TOPIC_SUBSCRIBERS));
+	queue->capacity += 1;
+}
+
 int IsSubQueueFull(SUBSCRIBER_QUEUE* queue) {
 	if (queue->size == queue->capacity)
 		return 1;
@@ -66,10 +71,16 @@ int IsMessageQueueEmpty(MESSAGE_QUEUE* queue) {
 
 //pravi red sa 5 (???) struktura topic subscribera 
 void EnqueueSub(SUBSCRIBER_QUEUE* queue, char* topic) {
-	TOPIC_SUBSCRIBERS ts;
-	strcpy(ts.topic, topic);
+	//TOPIC_SUBSCRIBERS* ts = (TOPIC_SUBSCRIBERS*)malloc(sizeof(TOPIC_SUBSCRIBERS));
+	//if (ts == NULL) {
+	//	printf("NULLLLLL");
+	//}
+	TopicSubscribers ts;
+	ts.topic = topic;
 	ts.size = 0; 
 
+	if (IsSubQueueFull(queue))
+		ExpandQueue(queue);
 	queue->rear = (queue->rear + 1) % queue->capacity;
 	queue->subArray[queue->rear] = ts;
 	queue->size = queue->size + 1;
