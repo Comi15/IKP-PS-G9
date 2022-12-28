@@ -19,7 +19,10 @@
     </ProjectConfiguration>
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="PubSub2.c" />
+    <ClCompile Include="PubSub2.cpp" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="PubSub2.h" />
   </ItemGroup>
   <PropertyGroup Label="Globals">
     <VCProjectVersion>16.0</VCProjectVersion>

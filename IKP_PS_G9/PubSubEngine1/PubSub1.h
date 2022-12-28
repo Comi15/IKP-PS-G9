@@ -16,6 +16,7 @@
 
 #define DEFAULT_BUFLEN 512
 #define DEFAULT_PORT "27016"
+#define DEFAULT_CLIENT_PORT 27017
 #define SERVER_SLEEP_TIME 50
 #define NUMBER_OF_CLIENTS 40
 #define INV_SOCKET 3435973836
@@ -28,6 +29,7 @@ void Connect(SOCKET);
 int SelectFunction(SOCKET, char);
 char* ReceiveFunction(SOCKET);
 void Publish(MESSAGE_QUEUE*, char*, char*, int);
+int SendFunction(SOCKET connectSocket, char* message, int messageSize);
 
 void Connect(SOCKET acceptedSocket) {
 
@@ -84,6 +86,12 @@ char* ReceiveFunction(SOCKET acceptedSocket) {
 	int iResult;
 	char* myBuffer = (char*)(malloc(DEFAULT_BUFLEN));
 
+	if (myBuffer == NULL)
+	{
+		printf("Unable to allocate memory for the BUFFER");
+		exit(0);
+	}
+
 	int selectResult = SelectFunction(acceptedSocket, 'r');
 	if (selectResult == -1) {
 		memcpy(myBuffer, "ErrorS", 7);
@@ -115,4 +123,24 @@ void Publish(MESSAGE_QUEUE* messageQueue, char* topic, char* message, int client
 	EnqueueMessage(messageQueue, data);
 
 	printf("\nPublisher %d published new message to topic %s.\nMessage: %s\n", clientNumber + 1, data.topic, data.message);
+}
+
+
+int SendFunction(SOCKET connectSocket, char* message, int messageSize) {
+
+	int selectResult = SelectFunction(connectSocket, 'w');
+	if (selectResult == -1) {
+		return -1;
+	}
+	int iResult = send(connectSocket, message, messageSize, 0);
+
+	if (iResult == SOCKET_ERROR)
+	{
+		printf("send failed with error: %d\n", WSAGetLastError());
+		closesocket(connectSocket);
+		WSACleanup();
+		return 0;
+	}
+
+	return 1;
 }

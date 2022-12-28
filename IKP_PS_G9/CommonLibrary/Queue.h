@@ -38,6 +38,11 @@ MESSAGE_QUEUE* CreateMessageQueue(int capacity) {
 
 void ExpandQueue(SUBSCRIBER_QUEUE* queue) {
 	queue->subArray = (TOPIC_SUBSCRIBERS*)realloc(queue->subArray, queue->size * (sizeof(TOPIC_SUBSCRIBERS)) + sizeof(TOPIC_SUBSCRIBERS));
+	if (queue->subArray == NULL)
+	{
+		printf("Unable to allocate memory for expanding subscriber queue.");
+		exit(0);
+	}
 	queue->capacity += 1;
 }
 

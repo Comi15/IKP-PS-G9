@@ -8,12 +8,16 @@ int publisherThreadKilled = -1;
 SOCKET acceptedSockets[NUMBER_OF_CLIENTS];
 
 MESSAGE_QUEUE* messageQueue;
+DATA poppedMessage;
 
 int clientsCount = 0;
 int messages = 0;
 
 HANDLE PublisherThreads[NUMBER_OF_CLIENTS];
 DWORD PublisherThreadsID[NUMBER_OF_CLIENTS];
+
+HANDLE PubSubWorkThread;
+DWORD PubSubWorkThreadID;
 
 #define SAFE_DELETE_HANDLE(h) {if(h)CloseHandle(h);}
 
@@ -50,6 +54,7 @@ DWORD WINAPI PublisherWork(LPVOID lpParam)
 				LeaveCriticalSection(&message_queueAccess);
 				ReleaseSemaphore(pubSubSemaphore, 1, NULL);
 				free(recvRes);
+
 			}
 		}
 		else if (!strcmp(recvRes, "ErrorS")) {
@@ -75,6 +80,61 @@ DWORD WINAPI PublisherWork(LPVOID lpParam)
 	
 	return 1;
 }
+
+
+
+DWORD WINAPI PubSub1Work(LPVOID lpParam)
+{
+	int iResult = 0;
+	SOCKET connectedSocket = *(SOCKET*)lpParam;
+
+	while (server_running)
+	{
+
+		WaitForSingleObject(pubSubSemaphore, INFINITE);
+
+
+		EnterCriticalSection(&message_queueAccess);
+		poppedMessage = DequeueMessage(messageQueue);
+		LeaveCriticalSection(&message_queueAccess);
+
+
+
+		char* message = (char*)malloc(sizeof(DATA) + 1);
+
+		if (message == NULL)
+		{
+			printf("Unable to alocate memory for the message buffer.");
+			exit(0);
+		}
+
+		memcpy(message, &poppedMessage.topic, (strlen(poppedMessage.topic)));
+		memcpy(message + (strlen(poppedMessage.topic)), ":", 1);
+		memcpy(message + (strlen(poppedMessage.topic) + 1), &poppedMessage.message, (strlen(poppedMessage.message) + 1));
+
+		int messageSize = strlen(message) + 1;
+		int sendResult = SendFunction(connectedSocket, message, messageSize);
+		//ReleaseSemaphore(pubSubSemaphore, 1, NULL);
+		free(message);
+		//break;
+
+		if (sendResult == -1)
+		   break;
+
+	}
+		
+		
+	
+
+		
+	
+
+	//if (!serverStopped)
+	//	subscriberSendThreadKilled = argumentStructure.ordinalNumber;
+	//
+	return 1;
+}
+
 
 DWORD WINAPI StopServer(LPVOID lpParam)
 {
@@ -124,6 +184,7 @@ int main()
 	SOCKET listenSocket = INVALID_SOCKET;
 
 	int iResult;
+	//int IResultSend;
 
 	char recvbuf[DEFAULT_BUFLEN];
 
@@ -134,6 +195,11 @@ int main()
 		printf("WSAStartup failed with error: %d\n", WSAGetLastError());
 		return 1;
 	}
+
+
+
+	
+
 
 	struct addrinfo* resultingAddress = NULL;
 	struct addrinfo hints;
@@ -195,8 +261,51 @@ int main()
 		return 1;
 	}
 
-	printf("\nServer successfully started, waiting for clients.\n");
 
+
+	//Code for the client part of PubSub1
+	SOCKET connectSocket = INVALID_SOCKET;
+
+
+	connectSocket = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP);
+
+	if (connectSocket == INVALID_SOCKET)
+	{
+		printf("socket failed with error: %ld\n", WSAGetLastError());
+		WSACleanup();
+		return 1;
+	}
+
+	struct sockaddr_in serverAddress;
+	serverAddress.sin_family = AF_INET;
+	serverAddress.sin_addr.s_addr = inet_addr("127.0.0.1");
+	serverAddress.sin_port = htons(DEFAULT_CLIENT_PORT);
+
+	if (connect(connectSocket, (SOCKADDR*)&serverAddress, sizeof(serverAddress)) == SOCKET_ERROR)
+	{
+		printf("Unable to connect to server.\n");
+		closesocket(connectSocket);
+		WSACleanup();
+	}
+
+	
+	int iResultSend = ioctlsocket(connectSocket, FIONBIO, &nonBlockingMode);
+
+	if (iResultSend == SOCKET_ERROR)
+	{
+		printf("ioctlsocket failed with error: %ld\n", WSAGetLastError());
+		return 1;
+	}
+
+	//char* message = (char*)malloc(250 * sizeof(char));
+
+
+
+
+
+	printf("\nServer successfully started, waiting for clients.\n");
+	
+	PubSubWorkThread = CreateThread(NULL, 0, &PubSub1Work, &connectSocket, 0, &PubSubWorkThreadID);
 	exitThread = CreateThread(NULL, 0, &StopServer, &listenSocket, 0, &exitThreadID);
 
 	while (clientsCount < NUMBER_OF_CLIENTS && server_running)
@@ -218,14 +327,29 @@ int main()
 
 		Connect(acceptedSockets[clientsCount]);
 		PublisherThreads[clientsCount] = CreateThread(NULL, 0, &PublisherWork, &publisherThreadArgument, 0, &PublisherThreadsID[clientsCount]);
-
+		
 		clientsCount++;
 	}
+
+
+
+	
+
+
+
+
+
+
 
 	for (int i = 0; i < clientsCount; i++) {
 	
 		if (PublisherThreads[i])
 			WaitForSingleObject(PublisherThreads[i], INFINITE);
+	}
+
+	if (PubSubWorkThread)
+	{
+		WaitForSingleObject(PubSubWorkThread, INFINITE);
 	}
 
 	if (exitThread) {
@@ -240,11 +364,13 @@ int main()
 		SAFE_DELETE_HANDLE(PublisherThreads[i]);
 	}
 	
+	SAFE_DELETE_HANDLE(PubSubWorkThread);
 	SAFE_DELETE_HANDLE(exitThread);
 
 	SAFE_DELETE_HANDLE(pubSubSemaphore);
 	
 	closesocket(listenSocket);
+	closesocket(connectSocket);
 
 	free(messageQueue->dataArray);
 	free(messageQueue);
