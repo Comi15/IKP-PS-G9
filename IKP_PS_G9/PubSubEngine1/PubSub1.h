@@ -30,6 +30,7 @@ int SelectFunction(SOCKET, char);
 char* ReceiveFunction(SOCKET);
 void Publish(MESSAGE_QUEUE*, char*, char*, int);
 int SendFunction(SOCKET connectSocket, char* message, int messageSize);
+int ConnectToPubSub2(SOCKET);
 
 void Connect(SOCKET acceptedSocket) {
 
@@ -37,6 +38,19 @@ void Connect(SOCKET acceptedSocket) {
 	publisherThreadArgument.socket = acceptedSocket;
 
 	printf("\nPublisher %d connected.\n", ++numberOfPublishers);
+}
+
+int ConnectToPubSub2(SOCKET connectSocket) {
+
+	char* connectMessage = (char*)malloc(8 * sizeof(char));
+	strcpy(connectMessage, "pubsub1");
+
+	int messageSize = strlen(connectMessage) + 1;
+
+	int retVal = SendFunction(connectSocket, connectMessage, messageSize);
+	free(connectMessage);
+
+	return retVal;
 }
 
 int SelectFunction(SOCKET listenSocket, char rw) {

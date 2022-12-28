@@ -11,7 +11,6 @@ MESSAGE_QUEUE* messageQueue;
 DATA poppedMessage;
 
 int clientsCount = 0;
-int messages = 0;
 
 HANDLE PublisherThreads[NUMBER_OF_CLIENTS];
 DWORD PublisherThreadsID[NUMBER_OF_CLIENTS];
@@ -50,7 +49,6 @@ DWORD WINAPI PublisherWork(LPVOID lpParam)
 				ptr = strtok(NULL, delimiter);
 				EnterCriticalSection(&message_queueAccess);
 				Publish(messageQueue, topic, message, argumentStructure.clientNumber);
-				messages++;
 				LeaveCriticalSection(&message_queueAccess);
 				ReleaseSemaphore(pubSubSemaphore, 1, NULL);
 				free(recvRes);
@@ -81,8 +79,6 @@ DWORD WINAPI PublisherWork(LPVOID lpParam)
 	return 1;
 }
 
-
-
 DWORD WINAPI PubSub1Work(LPVOID lpParam)
 {
 	int iResult = 0;
@@ -93,12 +89,12 @@ DWORD WINAPI PubSub1Work(LPVOID lpParam)
 
 		WaitForSingleObject(pubSubSemaphore, INFINITE);
 
+		if (!server_running)
+			break;
 
 		EnterCriticalSection(&message_queueAccess);
 		poppedMessage = DequeueMessage(messageQueue);
 		LeaveCriticalSection(&message_queueAccess);
-
-
 
 		char* message = (char*)malloc(sizeof(DATA) + 1);
 
@@ -135,21 +131,24 @@ DWORD WINAPI PubSub1Work(LPVOID lpParam)
 	return 1;
 }
 
-
 DWORD WINAPI StopServer(LPVOID lpParam)
 {
 	char input;
+	SOCKET connectedSocket = *(SOCKET*)lpParam;
+
 	while (server_running) {
 
 		printf("\nPress X to stop server.\n");
 		input = _getch();
 
 		if (input == 'x' || input == 'X') {
-			ReleaseSemaphore(pubSubSemaphore, 1, NULL);
-
-			server_running = false;
 
 			int iResult = 0;
+			iResult = SendFunction(connectedSocket, (char*)"shutdown", 9);
+			server_running = false;
+
+			ReleaseSemaphore(pubSubSemaphore, 1, NULL);
+
 			for (int i = 0; i < clientsCount; i++) {
 				if (acceptedSockets[i] != -1) {
 					iResult = shutdown(acceptedSockets[i], SD_BOTH);
@@ -162,7 +161,7 @@ DWORD WINAPI StopServer(LPVOID lpParam)
 					closesocket(acceptedSockets[i]);
 				}
 			}
-			closesocket(*(SOCKET*)lpParam);
+			closesocket(connectedSocket);
 
 			break;
 		}
@@ -195,11 +194,6 @@ int main()
 		printf("WSAStartup failed with error: %d\n", WSAGetLastError());
 		return 1;
 	}
-
-
-
-	
-
 
 	struct addrinfo* resultingAddress = NULL;
 	struct addrinfo hints;
@@ -297,16 +291,12 @@ int main()
 		return 1;
 	}
 
-	//char* message = (char*)malloc(250 * sizeof(char));
-
-
-
-
-
 	printf("\nServer successfully started, waiting for clients.\n");
+
+	ConnectToPubSub2(connectSocket);
 	
 	PubSubWorkThread = CreateThread(NULL, 0, &PubSub1Work, &connectSocket, 0, &PubSubWorkThreadID);
-	exitThread = CreateThread(NULL, 0, &StopServer, &listenSocket, 0, &exitThreadID);
+	exitThread = CreateThread(NULL, 0, &StopServer, &connectSocket, 0, &exitThreadID);
 
 	while (clientsCount < NUMBER_OF_CLIENTS && server_running)
 	{

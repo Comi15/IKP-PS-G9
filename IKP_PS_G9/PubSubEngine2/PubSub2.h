@@ -22,30 +22,65 @@
 #define INV_SOCKET 3435973836
 
 bool server_running = true;
-int clientsCount = 0;
+int subscribersCount = 0;
+THREAD_ARGUMENT subscriberThreadArgument;
+
 
 void AddTopics(SUBSCRIBER_QUEUE*);
 int SelectFunction(SOCKET, char);
-char* ReceiveFunction(SOCKET, char*);
+char* ReceiveFunction(SOCKET);
 void Forward(MESSAGE_QUEUE* messageQueue, char* topic, char* message);
-//void Subscribe(struct Queue*, SOCKET, char*);
-//char Connect(SOCKET);
-//void SubscriberShutDown(Queue*, SOCKET, struct Subscriber subscribers[]);
-//int SendFunction(SOCKET, char*, int);
+char* Connect(SOCKET);
 
 
-void AddTopics(SUBSCRIBER_QUEUE* queue) {
+char* Connect(SOCKET acceptedSocket) {
+	char* recvRes;
 
-	EnqueueSub(queue, (char*)"Sport");
-	EnqueueSub(queue, (char*)"Fashion");
-	EnqueueSub(queue, (char*)"Politics");
-	EnqueueSub(queue, (char*)"News");
-	EnqueueSub(queue,(char*) "Show business");
+	recvRes = ReceiveFunction(acceptedSocket);
+
+	if (strcmp(recvRes, "ErrorC") && strcmp(recvRes, "ErrorR"))
+	{
+		if (!strcmp(recvRes, "pubsub1")) {
+			printf("\PubSub1 connected.\n");
+			free(recvRes);
+			
+			return (char*)"pubsub1";
+		}
+
+		if (!strcmp(recvRes, "sub")) {
+
+			subscriberThreadArgument.socket = acceptedSocket;
+			subscriberThreadArgument.clientNumber = subscribersCount;
+
+			printf("\nSubscriber %d connected.\n", ++subscribersCount);
+
+			free(recvRes);
+
+			return (char*)"sub";
+		}
+
+	}
+	else if (!strcmp(recvRes, "ErrorC"))
+	{
+		printf("\nConnection with client closed.\n");
+		closesocket(acceptedSocket);
+	}
+	else if (!strcmp(recvRes, "ErrorR"))
+	{
+		printf("\nrecv failed with error: %d\n", WSAGetLastError());
+		closesocket(acceptedSocket);
+	}
+	free(recvRes);
 }
 
-
-
-
+void AddTopics(SUBSCRIBER_QUEUE* queue) {
+	EnqueueSub(queue, (char*)"Animals");
+	EnqueueSub(queue, (char*)"History");
+	EnqueueSub(queue, (char*)"Geography");
+	EnqueueSub(queue, (char*)"Sport");
+	EnqueueSub(queue, (char*) "Mathematics");
+	EnqueueSub(queue, (char*)"Music");
+}
 
 int SelectFunction(SOCKET listenSocket, char rw) {
 	int iResult = 0;
@@ -64,10 +99,10 @@ int SelectFunction(SOCKET listenSocket, char rw) {
 			return -1;
 
 		if (rw == 'r') {
-			iResult = select(0 /* ignored */, &set, NULL, NULL, &timeVal);
+			iResult = select(0, &set, NULL, NULL, &timeVal);
 		}
 		else {
-			iResult = select(0 /* ignored */, NULL, &set, NULL, &timeVal);
+			iResult = select(0, NULL, &set, NULL, &timeVal);
 		}
 
 
@@ -85,11 +120,7 @@ int SelectFunction(SOCKET listenSocket, char rw) {
 		break;
 
 	} while (1);
-
 }
-
-
-
 
 char* ReceiveFunction(SOCKET acceptedSocket) {
 
@@ -125,8 +156,6 @@ char* ReceiveFunction(SOCKET acceptedSocket) {
 
 }
 
-
-
 void Forward(MESSAGE_QUEUE* messageQueue, char* topic, char* message) {
 
 	DATA data;
@@ -135,5 +164,5 @@ void Forward(MESSAGE_QUEUE* messageQueue, char* topic, char* message) {
 
 	EnqueueMessage(messageQueue, data);
 
-	printf("\nPubSub1  sent forward a new message from the Publisher to topic %s.\nMessage: %s\n", data.topic, data.message);
+	printf("\nPubSub1 sent forward a new message from the Publisher to topic %s.\nMessage: %s\n", data.topic, data.message);
 }
