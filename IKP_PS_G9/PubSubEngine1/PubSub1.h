@@ -26,11 +26,11 @@ THREAD_ARGUMENT publisherThreadArgument;
 bool server_running = true;
 
 void Connect(SOCKET);
+void ConnectToPubSub2(SOCKET);
 int SelectFunction(SOCKET, char);
 char* ReceiveFunction(SOCKET);
 void Publish(MESSAGE_QUEUE*, char*, char*, int);
-int SendFunction(SOCKET connectSocket, char* message, int messageSize);
-int ConnectToPubSub2(SOCKET);
+int SendFunction(SOCKET, char*, int);
 
 void Connect(SOCKET acceptedSocket) {
 
@@ -40,7 +40,7 @@ void Connect(SOCKET acceptedSocket) {
 	printf("\nPublisher %d connected.\n", ++numberOfPublishers);
 }
 
-int ConnectToPubSub2(SOCKET connectSocket) {
+void ConnectToPubSub2(SOCKET connectSocket) {
 
 	char* connectMessage = (char*)malloc(8 * sizeof(char));
 
@@ -56,7 +56,7 @@ int ConnectToPubSub2(SOCKET connectSocket) {
 	int retVal = SendFunction(connectSocket, connectMessage, messageSize);
 	free(connectMessage);
 
-	return retVal;
+	//return retVal;
 }
 
 int SelectFunction(SOCKET listenSocket, char rw) {

@@ -24,20 +24,18 @@
 #define SAFE_DELETE_HANDLE(h) {if(h)CloseHandle(h);}
 
 bool server_running = true;
-int subscribersCount = 0;
 THREAD_ARGUMENT subscriberThreadArgument;
 int numberOfConnectedSubs = 0;
 int numberOfSubscribedSubs = 0;
 
-
 void AddTopics(SUBSCRIBER_QUEUE*);
 int SelectFunction(SOCKET, char);
-int SendFunction(SOCKET connectSocket, char* message, int messageSize);
+int SendFunction(SOCKET, char*, int);
 char* ReceiveFunction(SOCKET);
-void Forward(MESSAGE_QUEUE* messageQueue, char* topic, char* message);
+void Forward(MESSAGE_QUEUE*, char*, char*);
 char* Connect(SOCKET);
 void Subscribe(SUBSCRIBER_QUEUE*, SOCKET, char*);
-void SubscriberShutDown(SUBSCRIBER_QUEUE*, SOCKET, SUBSCRIBER subscribers[]);
+void SubscriberShutDown(SUBSCRIBER_QUEUE*, SOCKET, SUBSCRIBER);
 
 char* Connect(SOCKET acceptedSocket) {
 	char* recvRes;
@@ -56,9 +54,9 @@ char* Connect(SOCKET acceptedSocket) {
 		if (!strcmp(recvRes, "sub")) {
 
 			subscriberThreadArgument.socket = acceptedSocket;
-			subscriberThreadArgument.clientNumber = subscribersCount;
+			subscriberThreadArgument.clientNumber = numberOfConnectedSubs;
 
-			printf("\nSubscriber %d connected.\n", ++subscribersCount);
+			printf("\nSubscriber %d connected.\n", numberOfConnectedSubs + 1);
 
 			free(recvRes);
 
@@ -84,7 +82,7 @@ void AddTopics(SUBSCRIBER_QUEUE* queue) {
 	EnqueueSub(queue, (char*)"History");
 	EnqueueSub(queue, (char*)"Geography");
 	EnqueueSub(queue, (char*)"Sport");
-	EnqueueSub(queue, (char*) "Mathematics");
+	EnqueueSub(queue, (char*)"Mathematics");
 	EnqueueSub(queue, (char*)"Music");
 }
 
@@ -181,7 +179,7 @@ char* ReceiveFunction(SOCKET acceptedSocket) {
 	{
 		memcpy(myBuffer, "ErrorR", 7);
 	}
-	return(myBuffer);
+	return myBuffer;
 
 }
  //Funkcija koja push-a poruku prosledjenu od PubSub1 komponente u red

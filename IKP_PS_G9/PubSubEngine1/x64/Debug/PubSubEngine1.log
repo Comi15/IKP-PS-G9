@@ -1,7 +1,1 @@
-﻿  PubSub1.cpp
-C:\Users\Korisnik\Desktop\Git_Repo_IKP\IKP-PS-G9\IKP_PS_G9\PubSubEngine1\PubSub1.h(54,46): warning C4267: 'initializing': conversion from 'size_t' to 'int', possible loss of data
-C:\Users\Korisnik\Desktop\Git_Repo_IKP\IKP-PS-G9\IKP_PS_G9\PubSubEngine1\PubSub1.cpp(113,40): warning C4267: 'initializing': conversion from 'size_t' to 'int', possible loss of data
-C:\Users\Korisnik\Desktop\Git_Repo_IKP\IKP-PS-G9\IKP_PS_G9\PubSubEngine1\PubSub1.cpp(183,7): warning C4101: 'recvbuf': unreferenced local variable
-C:\Users\Korisnik\Desktop\Git_Repo_IKP\IKP-PS-G9\IKP_PS_G9\CommonLibrary\Queue.h(110): warning C4715: 'DequeueSub': not all control paths return a value
-C:\Users\Korisnik\Desktop\Git_Repo_IKP\IKP-PS-G9\IKP_PS_G9\CommonLibrary\Queue.h(119): warning C4715: 'DequeueMessage': not all control paths return a value
-  PubSubEngine1.vcxproj -> C:\Users\Korisnik\Desktop\Git_Repo_IKP\IKP-PS-G9\IKP_PS_G9\x64\Debug\PubSubEngine1.exe
+﻿
