@@ -21,17 +21,23 @@
 #define NUMBER_OF_CLIENTS 40
 #define INV_SOCKET 3435973836
 
+#define SAFE_DELETE_HANDLE(h) {if(h)CloseHandle(h);}
+
 bool server_running = true;
 int subscribersCount = 0;
 THREAD_ARGUMENT subscriberThreadArgument;
+int numberOfConnectedSubs = 0;
+int numberOfSubscribedSubs = 0;
 
 
 void AddTopics(SUBSCRIBER_QUEUE*);
 int SelectFunction(SOCKET, char);
+int SendFunction(SOCKET connectSocket, char* message, int messageSize);
 char* ReceiveFunction(SOCKET);
 void Forward(MESSAGE_QUEUE* messageQueue, char* topic, char* message);
 char* Connect(SOCKET);
-
+void Subscribe(SUBSCRIBER_QUEUE*, SOCKET, char*);
+void SubscriberShutDown(SUBSCRIBER_QUEUE*, SOCKET, SUBSCRIBER subscribers[]);
 
 char* Connect(SOCKET acceptedSocket) {
 	char* recvRes;
@@ -122,6 +128,29 @@ int SelectFunction(SOCKET listenSocket, char rw) {
 	} while (1);
 }
 
+
+
+int SendFunction(SOCKET connectSocket, char* message, int messageSize)
+{
+	int selectResult = SelectFunction(connectSocket, 'w');
+	if (selectResult == -1) {
+		return -1;
+	}
+	int iResult = send(connectSocket, message, messageSize, 0);
+
+	if (iResult == SOCKET_ERROR)
+	{
+		printf("send failed with error: %d\n", WSAGetLastError());
+		closesocket(connectSocket);
+		WSACleanup();
+		return 0;
+	}
+
+	return 1;
+}
+
+
+
 char* ReceiveFunction(SOCKET acceptedSocket) {
 
 	int iResult;
@@ -155,7 +184,7 @@ char* ReceiveFunction(SOCKET acceptedSocket) {
 	return(myBuffer);
 
 }
-
+ //Funkcija koja push-a poruku prosledjenu od PubSub1 komponente u red
 void Forward(MESSAGE_QUEUE* messageQueue, char* topic, char* message) {
 
 	DATA data;
@@ -165,4 +194,53 @@ void Forward(MESSAGE_QUEUE* messageQueue, char* topic, char* message) {
 	EnqueueMessage(messageQueue, data);
 
 	printf("\nPubSub1 sent forward a new message from the Publisher to topic %s.\nMessage: %s\n", data.topic, data.message);
+}
+
+//Funkcija koja push-a subscriber-a u red kada se pretplati na temu
+void Subscribe(SUBSCRIBER_QUEUE* queue, SOCKET sub, char* topic) {
+	for (int i = 0; i < queue->size; i++) {
+		if (!strcmp(queue->subArray[i].topic, topic)) {
+			int index = queue->subArray[i].size;
+			queue->subArray[i].subscribers[index] = sub;
+			queue->subArray[i].size++;
+		}
+	}
+}
+
+
+
+//brise subscriber-a iz reda kada on ugasi konekciju
+void SubscriberShutDown(SUBSCRIBER_QUEUE* queue, SOCKET acceptedSocket, SUBSCRIBER subscribers[])
+{
+
+	for (int i = 0; i < queue->size; i++)
+	{
+		for (int j = 0; j < queue->subArray[i].size; j++) //prolazimo kroz TOPIC_SUBSCRIBERS strukture
+		{
+			if (queue->subArray[i].subscribers[j] == acceptedSocket) {   //ako je to taj socket
+				int size = queue->subArray[i].size;						 //Logika brisanja iz reda
+				SOCKET temp = queue->subArray[i].subscribers[size]; 	 //Logika brisanja iz reda
+				if (temp != INV_SOCKET) {								 //Logika brisanja iz reda
+					queue->subArray[i].subscribers[size] = INV_SOCKET;	 //Logika brisanja iz reda
+					queue->subArray[i].subscribers[j] = temp;			 //Logika brisanja iz reda
+					queue->subArray[i].size--;							 //Logika brisanja iz reda
+				}														 //Logika brisanja iz reda
+				else {													 //Logika brisanja iz reda
+					queue->subArray[i].subscribers[j] = INV_SOCKET;		 //Logika brisanja iz reda
+					queue->subArray[i].size--;							 //Logika brisanja iz reda
+				}
+
+			}
+		}
+
+	}
+
+	for (int i = 0; i < numberOfSubscribedSubs; i++)
+	{
+		if (subscribers[i].socket == acceptedSocket) {
+			subscribers[i].socket = 0;
+			SAFE_DELETE_HANDLE(subscribers[i].hSemaphore);
+			subscribers[i].hSemaphore = 0;
+		}
+	}
 }

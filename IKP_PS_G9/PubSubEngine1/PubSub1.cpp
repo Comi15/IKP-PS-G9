@@ -20,6 +20,7 @@ DWORD PubSubWorkThreadID;
 
 #define SAFE_DELETE_HANDLE(h) {if(h)CloseHandle(h);}
 
+//funkcija koja se izvrsava u niti i prima poruku od Publisher-a i stavlja je u red 
 DWORD WINAPI PublisherWork(LPVOID lpParam)
 {
 	int iResult = 0;
@@ -79,6 +80,7 @@ DWORD WINAPI PublisherWork(LPVOID lpParam)
 	return 1;
 }
 
+//Funkcija koja se izvrsava u niti i prosledjuje poruku primljenu od Publishera PubSubEngin-u 2
 DWORD WINAPI PubSub1Work(LPVOID lpParam)
 {
 	int iResult = 0;
@@ -110,26 +112,19 @@ DWORD WINAPI PubSub1Work(LPVOID lpParam)
 
 		int messageSize = strlen(message) + 1;
 		int sendResult = SendFunction(connectedSocket, message, messageSize);
-		//ReleaseSemaphore(pubSubSemaphore, 1, NULL);
+		
 		free(message);
-		//break;
+		
 
 		if (sendResult == -1)
 		   break;
 
 	}
 		
-		
-	
-
-		
-	
-
-	//if (!serverStopped)
-	//	subscriberSendThreadKilled = argumentStructure.ordinalNumber;
-	//
 	return 1;
 }
+
+
 
 DWORD WINAPI StopServer(LPVOID lpParam)
 {
@@ -257,7 +252,7 @@ int main()
 
 
 
-	//Code for the client part of PubSub1
+	//Kreiranje klijentskog socket-a za komunikaciju sa PubSubEngine2 komponentom
 	SOCKET connectSocket = INVALID_SOCKET;
 
 

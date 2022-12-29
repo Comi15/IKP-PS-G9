@@ -3,4 +3,7 @@
   <ItemGroup>
     <ClCompile Include="SubClient.cpp" />
   </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="subscriber.h" />
+  </ItemGroup>
 </Project>

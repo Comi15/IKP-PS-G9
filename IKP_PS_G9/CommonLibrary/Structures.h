@@ -12,7 +12,7 @@
 typedef struct TopicSubscribers {
 	int size;
 	char* topic; //sport
-	SOCKET subsribers[10]; //pretplaceni na sport
+	SOCKET subscribers[10]; //pretplaceni na sport
 } TOPIC_SUBSCRIBERS;
 
 typedef struct SubscriberQueue {
@@ -34,3 +34,9 @@ typedef struct ThreadArgument {
 	SOCKET socket;
 	int clientNumber;
 } THREAD_ARGUMENT;
+
+typedef struct Subscriber {
+	SOCKET socket;
+	HANDLE hSemaphore;
+	bool running;
+}SUBSCRIBER;

@@ -43,6 +43,12 @@ void Connect(SOCKET acceptedSocket) {
 int ConnectToPubSub2(SOCKET connectSocket) {
 
 	char* connectMessage = (char*)malloc(8 * sizeof(char));
+
+	if (connectMessage == NULL)
+	{
+		printf("Unable to allocate memory for the connect message buffer");
+		exit(0);
+	}
 	strcpy(connectMessage, "pubsub1");
 
 	int messageSize = strlen(connectMessage) + 1;

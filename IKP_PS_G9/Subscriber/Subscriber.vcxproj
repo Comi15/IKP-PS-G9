@@ -21,6 +21,9 @@
   <ItemGroup>
     <ClCompile Include="SubClient.cpp" />
   </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="subscriber.h" />
+  </ItemGroup>
   <PropertyGroup Label="Globals">
     <VCProjectVersion>16.0</VCProjectVersion>
     <Keyword>Win32Proj</Keyword>
