@@ -1,1 +1,7 @@
-﻿
+﻿  SubClient.cpp
+C:\Users\aleksandra\Desktop\IKP-PS-G9\IKP_PS_G9\Subscriber\Subscriber.h(83,46): warning C4267: 'initializing': conversion from 'size_t' to 'int', possible loss of data
+C:\Users\aleksandra\Desktop\IKP-PS-G9\IKP_PS_G9\Subscriber\SubClient.cpp(36,41): warning C4267: 'initializing': conversion from 'size_t' to 'int', possible loss of data
+C:\Users\aleksandra\Desktop\IKP-PS-G9\IKP_PS_G9\Subscriber\SubClient.cpp(47,41): warning C4267: 'initializing': conversion from 'size_t' to 'int', possible loss of data
+C:\Users\aleksandra\Desktop\IKP-PS-G9\IKP_PS_G9\CommonLibrary\Queue.h(110): warning C4715: 'DequeueSub': not all control paths return a value
+C:\Users\aleksandra\Desktop\IKP-PS-G9\IKP_PS_G9\CommonLibrary\Queue.h(119): warning C4715: 'DequeueMessage': not all control paths return a value
+  Subscriber.vcxproj -> C:\Users\aleksandra\Desktop\IKP-PS-G9\IKP_PS_G9\x64\Debug\Subscriber.exe

@@ -8,9 +8,7 @@ CRITICAL_SECTION message_queueAccess;
 bool serverStopped = false;
 
 HANDLE pubSubSemaphore;
-int publisherThreadKilled = -1;
-int subscriberSendThreadKilled = -1;
-int subscriberRecvThreadKilled = -1;
+
 
 SOCKET acceptedSocket;
 
@@ -20,8 +18,6 @@ SOCKET acceptedSockets[NUMBER_OF_CLIENTS];
  SUBSCRIBER_QUEUE* subQueue;
  MESSAGE_QUEUE* messageQueue;
  DATA poppedMessage;
-//struct Subscriber subscribers[NUMBER_OF_CLIENTS];
-
 
 HANDLE SubscriberSendThreads[NUMBER_OF_CLIENTS];
 DWORD SubscriberSendThreadsID[NUMBER_OF_CLIENTS];
@@ -29,50 +25,16 @@ DWORD SubscriberSendThreadsID[NUMBER_OF_CLIENTS];
 HANDLE SubscriberRecvThreads[NUMBER_OF_CLIENTS];
 DWORD SubscriberRecvThreadsID[NUMBER_OF_CLIENTS];
 
-HANDLE PubSub2Thread;
-DWORD PubSub2ThreadId;
+HANDLE PubSub2ReceiveThread;
+DWORD PubSub2ReceiveThreadId;
 
-
-
-
-
-
-//funkcija koja se izvrsava u niti i proverava da li je nit ugasena pa zatim zatvara njen "handle"
-DWORD WINAPI CloseHandles(LPVOID lpParam) {
-	while (server_running) {
-
-		if (subscriberSendThreadKilled != -1) {
-			for (int i = 0; i < numberOfSubscribedSubs; i++) {
-				if (subscriberSendThreadKilled == i) {
-					SAFE_DELETE_HANDLE(SubscriberSendThreads[i]);
-					SubscriberSendThreads[i] = 0;
-					subscriberSendThreadKilled = -1;
-				}
-			}
-		}
-
-		if (subscriberRecvThreadKilled != -1) {
-			for (int i = 0; i < numberOfConnectedSubs; i++) {
-				if (subscriberRecvThreadKilled == i) {
-					SAFE_DELETE_HANDLE(SubscriberRecvThreads[i]);
-					SubscriberRecvThreads[i] = 0;
-					subscriberRecvThreadKilled = -1;
-				}
-			}
-		}
-	}
-	return 1;
-}
-
-
-
-
-
+HANDLE PubSub2WorkThread;
+DWORD PubSub2WorkThreadId;
 
 
 //Funkcija koja se izvrsava u niti za svakog pojedinacnog subscriber-a nakon sto se on pretplati na temu
 //Koristi se za prosledjivanje poruke subscriber-u
-DWORD WINAPI SubscriberWork(LPVOID lpParam)
+DWORD WINAPI SubscriberSend(LPVOID lpParam)
 {
 	int iResult = 0;
 	THREAD_ARGUMENT argumentStructure = *(THREAD_ARGUMENT*)lpParam;
@@ -102,8 +64,6 @@ DWORD WINAPI SubscriberWork(LPVOID lpParam)
 
 		int messageSize = strlen(message) + 1;
 		
-
-		
 		int sendResult = SendFunction(argumentStructure.socket, message, messageSize);
 
 		free(message);
@@ -113,16 +73,12 @@ DWORD WINAPI SubscriberWork(LPVOID lpParam)
 			break;
 	}
 
-	if (!serverStopped)
-		subscriberSendThreadKilled = argumentStructure.clientNumber;
-
 	return 1;
 }
 
 
 //Funkcija koja se izvrsava u niti koja se kreira i pokrece za svakog pojedinacnog subscriber-a kada se on poveze
 //Koristi se za primanje poruka od subscriber-a i omogucava pretplatu na vise tema
-
 DWORD WINAPI SubscriberReceive(LPVOID lpParam) {
 	char recvbuf[DEFAULT_BUFLEN];
 	ThreadArgument argumentRecvStructure = *(ThreadArgument*)lpParam;
@@ -144,9 +100,6 @@ DWORD WINAPI SubscriberReceive(LPVOID lpParam) {
 			acceptedSockets[argumentSendStructure.clientNumber] = -1;
 			free(recvRes);
 
-			if (!serverStopped)
-				subscriberRecvThreadKilled = argumentSendStructure.clientNumber;
-
 			return 1;
 		}
 		else {
@@ -158,7 +111,7 @@ DWORD WINAPI SubscriberReceive(LPVOID lpParam) {
 			subscriber.running = true;
 			subscribers[numberOfSubscribedSubs] = subscriber;
 
-			SubscriberSendThreads[numberOfSubscribedSubs] = CreateThread(NULL, 0, &SubscriberWork, &argumentSendStructure, 0, &SubscriberSendThreadsID[numberOfSubscribedSubs]);
+			SubscriberSendThreads[numberOfSubscribedSubs] = CreateThread(NULL, 0, &SubscriberSend, &argumentSendStructure, 0, &SubscriberSendThreadsID[numberOfSubscribedSubs]);
 			numberOfSubscribedSubs++;
 
 			EnterCriticalSection(&queueAccess);
@@ -185,7 +138,6 @@ DWORD WINAPI SubscriberReceive(LPVOID lpParam) {
 		free(recvRes);
 
 	}
-
 
 	while (subscriberRunning && server_running) {
 
@@ -232,13 +184,9 @@ DWORD WINAPI SubscriberReceive(LPVOID lpParam) {
 		}
 	}
 
-	if (!serverStopped)
-		subscriberRecvThreadKilled = argumentSendStructure.clientNumber;
-
 	return 1;
-
-
 }
+
 //funkcija koja se izvrsava u niti i prima poruke od PubSub1 komponente
 DWORD WINAPI PubSub2Recieve(LPVOID lpParam){
 	int iResult = 0;
@@ -298,11 +246,8 @@ DWORD WINAPI PubSub2Recieve(LPVOID lpParam){
 }
 
 
-
-/// A function executing in thread created and run at the begining of the main program. 
-/// It is used for going through queue and message queue and determining which message has to be sent to which subscriber.
-//Funkcija koja se izvrsava u niti  i koristi se za prolazak kroz red poruka i subscriber-a da proveri koja poruka treba kom subscriber-u da se posalje
-DWORD WINAPI PubSubWork(LPVOID lpParam) {
+//Funkcija koja se izvrsava u niti i koristi se za prolazak kroz red poruka i subscriber-a da proveri koja poruka treba kom subscriber-u da se posalje
+DWORD WINAPI PubSub2Work(LPVOID lpParam) {
 	int iResult = 0;
 	SOCKET sendSocket;
 	while (server_running) {
@@ -329,9 +274,7 @@ DWORD WINAPI PubSubWork(LPVOID lpParam) {
 					}
 				}
 			}
-
 		}
-
 	}
 	return 1;
 }
@@ -426,7 +369,9 @@ int main()
 
 	printf("\nServer successfully started, waiting for clients.\n");
 
-	while (clientsCount < NUMBER_OF_CLIENTS && server_running)
+	PubSub2WorkThread = CreateThread(NULL, 0, &PubSub2Work, NULL, 0, &PubSub2WorkThreadId);
+
+	while (numberOfConnectedSubs < NUMBER_OF_CLIENTS && server_running)
 	{
 		int selectResult = SelectFunction(listenSocket, 'r');
 		if (selectResult == -1) {
@@ -445,14 +390,12 @@ int main()
 
 		char* client = Connect(acceptedSocket);
 		if (!strcmp(client, "pubsub1")) {
-			PubSub2Thread = CreateThread(NULL, 0, &PubSub2Recieve, &acceptedSocket, 0, &PubSub2ThreadId);
+			PubSub2ReceiveThread = CreateThread(NULL, 0, &PubSub2Recieve, &acceptedSocket, 0, &PubSub2ReceiveThreadId);
 		}
 		else if (!strcmp(client, "sub")) {
-			//niti za subscribere
 			SubscriberRecvThreads[numberOfConnectedSubs] = CreateThread(NULL, 0, &SubscriberReceive, &subscriberThreadArgument, 0, &SubscriberRecvThreadsID[numberOfConnectedSubs]);
 			numberOfConnectedSubs++;
 		}
-		
 	}
 
 	

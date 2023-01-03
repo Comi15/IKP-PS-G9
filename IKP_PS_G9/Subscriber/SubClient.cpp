@@ -5,12 +5,15 @@
 #include<stdio.h>
 #include "Subscriber.h"
 
-HANDLE SubscriberSendThread, SubscriberRecvThread;
-DWORD SubscriberSendThreadId, SubscriberRecvThreadId;
+HANDLE SendThread, RecvThread;
+DWORD SendThreadId, RecvThreadId;
 
 DWORD WINAPI SubscriberSend(LPVOID lpParam) {
 
 	int iResult = 0;
+	int topics[5];
+	int topicCount = 0;
+
 	SOCKET connectSocket = *(SOCKET*)lpParam;
 	while (sub_running) {
 
@@ -20,6 +23,13 @@ DWORD WINAPI SubscriberSend(LPVOID lpParam) {
 		char* message = (char*)malloc(20 * sizeof(char));
 
 		if (input == '1' || input == '2' || input == '3' || input == '4' || input == '5' || input == '6') {
+
+			if (AlreadySubscribed(input, topics, topicCount)) {
+				printf("You are already subscribed to this topic.\n");
+				continue;
+			}
+
+			topics[topicCount++] = input - '0';
 
 			ProcessInput(input, message);
 
@@ -49,6 +59,57 @@ DWORD WINAPI SubscriberSend(LPVOID lpParam) {
 			printf("Invalid input.\n");
 			free(message);
 			continue;
+		}
+	}
+	return 1;
+}
+
+DWORD WINAPI SubscriberReceive(LPVOID lpParam) {
+	int iResult = 0;
+	SOCKET connectSocket = *(SOCKET*)lpParam;
+	char* recvRes;
+
+	while (sub_running)
+	{
+		recvRes = ReceiveFunction(connectSocket);
+
+		if (strcmp(recvRes, "ErrorC") && strcmp(recvRes, "ErrorR") && strcmp(recvRes, "ErrorS"))
+		{
+			char delimiter[] = ":";
+
+			char* ptr = strtok(recvRes, delimiter);
+
+			char* topic = ptr;
+			ptr = strtok(NULL, delimiter);
+			char* message = ptr;
+			ptr = strtok(NULL, delimiter);
+
+			printf("\nReceived new message to topic %s.\nMessage: %s\n", topic, message);
+
+			free(recvRes);
+		}
+		else if (!strcmp(recvRes, "ErrorS")) {
+			closesocket(connectSocket);
+			sub_running = false;
+			free(recvRes);
+			break;
+		}
+		else if (!strcmp(recvRes, "ErrorC"))
+		{
+			printf("\nConnection with server closed.\n");
+			printf("Press any key to close this window . . .");
+			closesocket(connectSocket);
+			sub_running = false;
+			free(recvRes);
+			break;
+		}
+		else if (!strcmp(recvRes, "ErrorR"))
+		{
+			printf("recv failed with error: %d\n", WSAGetLastError());
+			closesocket(connectSocket);
+			sub_running = false;
+			free(recvRes);
+			break;
 		}
 	}
 	return 1;
@@ -98,16 +159,17 @@ int main()
 	}
 
 	Connect(connectSocket);
-	SubscriberSendThread = CreateThread(NULL, 0, &SubscriberSend, &connectSocket, 0, &SubscriberSendThreadId);
+	SendThread = CreateThread(NULL, 0, &SubscriberSend, &connectSocket, 0, &SendThreadId);
+	RecvThread = CreateThread(NULL, 0, &SubscriberReceive, &connectSocket, 0, &SendThreadId);
 
 	while (sub_running) {
 
 	}
 
-	if (SubscriberSendThread)
-		WaitForSingleObject(SubscriberSendThread, INFINITE);
+	if (SendThread)
+		WaitForSingleObject(SendThread, INFINITE);
 
-	SAFE_DELETE_HANDLE(SubscriberSendThread);
+	SAFE_DELETE_HANDLE(SendThread);
 	
 	closesocket(connectSocket);
 

@@ -35,7 +35,7 @@ void PrintMenu() {
 	printf("\t3.Geography\n");
 	printf("\t4.Sport \n");
 	printf("\t5.Mathematics\n");
-	printf("\t6.Music \n");
+	printf("\t6.Music \n\n");
 	printf("Press X if you want to close connection.\n");
 }
 

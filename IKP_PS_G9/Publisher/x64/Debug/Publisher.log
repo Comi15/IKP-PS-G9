@@ -1,1 +1,4 @@
-﻿
+﻿  PubClient.cpp
+C:\Users\aleksandra\Desktop\IKP-PS-G9\IKP_PS_G9\Publisher\Publisher.h(47,44): warning C4267: 'initializing': conversion from 'size_t' to 'int', possible loss of data
+C:\Users\aleksandra\Desktop\IKP-PS-G9\IKP_PS_G9\Publisher\PubClient.cpp(21,40): warning C4267: 'initializing': conversion from 'size_t' to 'int', possible loss of data
+  Publisher.vcxproj -> C:\Users\aleksandra\Desktop\IKP-PS-G9\IKP_PS_G9\x64\Debug\Publisher.exe
