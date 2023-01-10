@@ -23,7 +23,7 @@
 
 int numberOfPublishers = 0;
 THREAD_ARGUMENT publisherThreadArgument;
-bool server_running = true;
+bool pubsub1_running = true;
 
 void Connect(SOCKET);
 void ConnectToPubSub2(SOCKET);
@@ -55,8 +55,6 @@ void ConnectToPubSub2(SOCKET connectSocket) {
 
 	int retVal = SendFunction(connectSocket, connectMessage, messageSize);
 	free(connectMessage);
-
-	//return retVal;
 }
 
 int SelectFunction(SOCKET listenSocket, char rw) {
@@ -72,7 +70,7 @@ int SelectFunction(SOCKET listenSocket, char rw) {
 		timeVal.tv_sec = 0;
 		timeVal.tv_usec = 0;
 
-		if (!server_running)
+		if (!pubsub1_running)
 			return -1;
 
 		if (rw == 'r') {

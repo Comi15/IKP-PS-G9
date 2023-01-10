@@ -97,7 +97,7 @@ DWORD WINAPI SubscriberReceive(LPVOID lpParam) {
 		else if (!strcmp(recvRes, "ErrorC"))
 		{
 			printf("\nConnection with server closed.\n");
-			printf("Press any key to close this window . . .");
+			printf("Press any key to close this window...");
 			closesocket(connectSocket);
 			sub_running = false;
 			free(recvRes);

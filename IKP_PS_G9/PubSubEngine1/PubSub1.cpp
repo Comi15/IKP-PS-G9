@@ -3,7 +3,6 @@
 CRITICAL_SECTION message_queueAccess;
 
 HANDLE pubSubSemaphore;
-int publisherThreadKilled = -1;
 
 SOCKET acceptedSockets[NUMBER_OF_CLIENTS];
 
@@ -11,23 +10,27 @@ MESSAGE_QUEUE* messageQueue;
 DATA poppedMessage;
 
 int clientsCount = 0;
+bool pubsub2_running = true;
 
 HANDLE PublisherThreads[NUMBER_OF_CLIENTS];
 DWORD PublisherThreadsID[NUMBER_OF_CLIENTS];
 
-HANDLE PubSubWorkThread;
-DWORD PubSubWorkThreadID;
+HANDLE PubSubForwardThread;
+DWORD PubSubForwardThreadID;
+
+HANDLE StopServerThread;
+DWORD StopServerThreadID;
 
 #define SAFE_DELETE_HANDLE(h) {if(h)CloseHandle(h);}
 
 //funkcija koja se izvrsava u niti i prima poruku od Publisher-a i stavlja je u red 
-DWORD WINAPI PublisherWork(LPVOID lpParam)
+DWORD WINAPI PublisherReceive(LPVOID lpParam)
 {
 	int iResult = 0;
 	THREAD_ARGUMENT argumentStructure = *(THREAD_ARGUMENT*)lpParam;
 	char* recvRes;
 
-	while (server_running) {
+	while (pubsub1_running) {
 
 		recvRes = ReceiveFunction(argumentStructure.socket);
 		if (strcmp(recvRes, "ErrorC") && strcmp(recvRes, "ErrorR") && strcmp(recvRes, "ErrorS"))
@@ -53,7 +56,6 @@ DWORD WINAPI PublisherWork(LPVOID lpParam)
 				LeaveCriticalSection(&message_queueAccess);
 				ReleaseSemaphore(pubSubSemaphore, 1, NULL);
 				free(recvRes);
-
 			}
 		}
 		else if (!strcmp(recvRes, "ErrorS")) {
@@ -81,17 +83,17 @@ DWORD WINAPI PublisherWork(LPVOID lpParam)
 }
 
 //Funkcija koja se izvrsava u niti i prosledjuje poruku primljenu od Publishera PubSubEngin-u 2
-DWORD WINAPI PubSub1Work(LPVOID lpParam)
+DWORD WINAPI ForwardMessage(LPVOID lpParam)
 {
 	int iResult = 0;
 	SOCKET connectedSocket = *(SOCKET*)lpParam;
 
-	while (server_running)
+	while (pubsub1_running)
 	{
 
 		WaitForSingleObject(pubSubSemaphore, INFINITE);
 
-		if (!server_running)
+		if (!pubsub1_running)
 			break;
 
 		EnterCriticalSection(&message_queueAccess);
@@ -116,22 +118,22 @@ DWORD WINAPI PubSub1Work(LPVOID lpParam)
 		free(message);
 		
 
-		if (sendResult == -1)
-		   break;
-
+		if (sendResult == -1 || sendResult == 0) {
+			pubsub2_running = false;
+			pubsub1_running = false;
+			break;
+		}
 	}
 		
 	return 1;
 }
-
-
 
 DWORD WINAPI StopServer(LPVOID lpParam)
 {
 	char input;
 	SOCKET connectedSocket = *(SOCKET*)lpParam;
 
-	while (server_running) {
+	while (pubsub1_running) {
 
 		printf("\nPress X to stop server.\n");
 		input = _getch();
@@ -140,7 +142,7 @@ DWORD WINAPI StopServer(LPVOID lpParam)
 
 			int iResult = 0;
 			iResult = SendFunction(connectedSocket, (char*)"shutdown", 9);
-			server_running = false;
+			pubsub1_running = false;
 
 			ReleaseSemaphore(pubSubSemaphore, 1, NULL);
 
@@ -172,15 +174,9 @@ int main()
 
 	pubSubSemaphore = CreateSemaphore(0, 0, 1, NULL);
 
-	HANDLE exitThread;
-	DWORD exitThreadID;
-
 	SOCKET listenSocket = INVALID_SOCKET;
 
 	int iResult;
-	//int IResultSend;
-
-	char recvbuf[DEFAULT_BUFLEN];
 
 	WSADATA wsaData;
 
@@ -290,10 +286,10 @@ int main()
 
 	ConnectToPubSub2(connectSocket);
 	
-	PubSubWorkThread = CreateThread(NULL, 0, &PubSub1Work, &connectSocket, 0, &PubSubWorkThreadID);
-	exitThread = CreateThread(NULL, 0, &StopServer, &connectSocket, 0, &exitThreadID);
+	PubSubForwardThread = CreateThread(NULL, 0, &ForwardMessage, &connectSocket, 0, &PubSubForwardThreadID);
+	StopServerThread = CreateThread(NULL, 0, &StopServer, &connectSocket, 0, &StopServerThreadID);
 
-	while (clientsCount < NUMBER_OF_CLIENTS && server_running)
+	while (clientsCount < NUMBER_OF_CLIENTS && pubsub2_running)
 	{
 		int selectResult = SelectFunction(listenSocket, 'r');
 		if (selectResult == -1) {
@@ -311,20 +307,10 @@ int main()
 		}
 
 		Connect(acceptedSockets[clientsCount]);
-		PublisherThreads[clientsCount] = CreateThread(NULL, 0, &PublisherWork, &publisherThreadArgument, 0, &PublisherThreadsID[clientsCount]);
+		PublisherThreads[clientsCount] = CreateThread(NULL, 0, &PublisherReceive, &publisherThreadArgument, 0, &PublisherThreadsID[clientsCount]);
 		
 		clientsCount++;
 	}
-
-
-
-	
-
-
-
-
-
-
 
 	for (int i = 0; i < clientsCount; i++) {
 	
@@ -332,13 +318,13 @@ int main()
 			WaitForSingleObject(PublisherThreads[i], INFINITE);
 	}
 
-	if (PubSubWorkThread)
+	if (PubSubForwardThread)
 	{
-		WaitForSingleObject(PubSubWorkThread, INFINITE);
+		WaitForSingleObject(PubSubForwardThread, INFINITE);
 	}
 
-	if (exitThread) {
-		WaitForSingleObject(exitThread, INFINITE);
+	if (StopServerThread) {
+		WaitForSingleObject(StopServerThread, INFINITE);
 	}
 
 	printf("\nServer shutting down...\n");
@@ -349,8 +335,8 @@ int main()
 		SAFE_DELETE_HANDLE(PublisherThreads[i]);
 	}
 	
-	SAFE_DELETE_HANDLE(PubSubWorkThread);
-	SAFE_DELETE_HANDLE(exitThread);
+	SAFE_DELETE_HANDLE(PubSubForwardThread);
+	SAFE_DELETE_HANDLE(StopServerThread);
 
 	SAFE_DELETE_HANDLE(pubSubSemaphore);
 	

@@ -74,18 +74,15 @@ int IsMessageQueueEmpty(MESSAGE_QUEUE* queue) {
 		return 0;
 }
 
-//pravi red sa 5 (???) struktura topic subscribera 
+//pravi red sa 6 struktura topic subscribera 
 void EnqueueSub(SUBSCRIBER_QUEUE* queue, char* topic) {
-	//TOPIC_SUBSCRIBERS* ts = (TOPIC_SUBSCRIBERS*)malloc(sizeof(TOPIC_SUBSCRIBERS));
-	//if (ts == NULL) {
-	//	printf("NULLLLLL");
-	//}
 	TopicSubscribers ts;
 	ts.topic = topic;
 	ts.size = 0; 
 
 	if (IsSubQueueFull(queue))
 		ExpandQueue(queue);
+
 	queue->rear = (queue->rear + 1) % queue->capacity;
 	queue->subArray[queue->rear] = ts;
 	queue->size = queue->size + 1;
@@ -97,16 +94,6 @@ void EnqueueMessage(MESSAGE_QUEUE* queue, DATA data) {
 	queue->rear = (queue->rear + 1) % queue->capacity;
 	queue->dataArray[queue->rear] = data;
 	queue->size = queue->size + 1;
-	//printf("%s enqueued to message queue.\n", data.topic);
-}
-
-TOPIC_SUBSCRIBERS DequeueSub(SUBSCRIBER_QUEUE* queue) {
-	if (!IsSubQueueEmpty(queue)) {
-		TOPIC_SUBSCRIBERS ts = queue->subArray[queue->front];
-		queue->front = (queue->front + 1) % queue->capacity;
-		queue->size = queue->size - 1;
-		return ts;
-	}
 }
 
 DATA DequeueMessage(MESSAGE_QUEUE* queue) {

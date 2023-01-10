@@ -5,7 +5,7 @@
 #include<stdio.h>
 #include "Publisher.h"
 
-void PublisherSend(SOCKET connectSocket, char* message) {
+void Send(SOCKET connectSocket, char* message) {
 
 	PrintMenu();
 	char input = _getch();
@@ -23,7 +23,8 @@ void PublisherSend(SOCKET connectSocket, char* message) {
 
 		free(publishMessage);
 
-		if (sendResult == -1)
+		if (sendResult == -1 || sendResult == 0)
+			server_running = false;
 			return;
 	}
 	else if (input == 'x' || input == 'X') {
@@ -86,9 +87,14 @@ int main()
 
 	char* message = (char*)malloc(250 * sizeof(char));
 
+	if (message == NULL) {
+		printf("Unable to allocate memory for message.\n");
+		exit(0);
+	}
+
 	while (server_running) {
 
-		PublisherSend(connectSocket, message);
+		Send(connectSocket, message);
 
 		if (!strcmp(message, "shutdown"))
 			break;

@@ -23,7 +23,7 @@
 
 #define SAFE_DELETE_HANDLE(h) {if(h)CloseHandle(h);}
 
-bool server_running = true;
+bool pubsub2_running = true;
 THREAD_ARGUMENT subscriberThreadArgument;
 int numberOfConnectedSubs = 0;
 int numberOfSubscribedSubs = 0;
@@ -99,7 +99,7 @@ int SelectFunction(SOCKET listenSocket, char rw) {
 		timeVal.tv_sec = 0;
 		timeVal.tv_usec = 0;
 
-		if (!server_running)
+		if (!pubsub2_running)
 			return -1;
 
 		if (rw == 'r') {
