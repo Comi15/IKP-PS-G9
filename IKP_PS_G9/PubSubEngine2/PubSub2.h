@@ -14,6 +14,7 @@
 #pragma comment (lib, "Ws2_32.lib")
 #pragma comment (lib, "Mswsock.lib")
 #pragma comment (lib, "AdvApi32.lib")
+#pragma warning(disable:6001)
 
 #define DEFAULT_BUFLEN 512
 #define DEFAULT_PORT "27017"
@@ -45,7 +46,7 @@ char* Connect(SOCKET acceptedSocket) {
 	if (strcmp(recvRes, "ErrorC") && strcmp(recvRes, "ErrorR"))
 	{
 		if (!strcmp(recvRes, "pubsub1")) {
-			printf("\PubSub1 connected.\n");
+			printf("\nPubSub1 connected.\n");
 			free(recvRes);
 			
 			return (char*)"pubsub1";
@@ -210,33 +211,31 @@ void Subscribe(SUBSCRIBER_QUEUE* queue, SOCKET sub, char* topic) {
 //brise subscriber-a iz reda kada on ugasi konekciju
 void SubscriberShutDown(SUBSCRIBER_QUEUE* queue, SOCKET acceptedSocket, SUBSCRIBER subscribers[])
 {
-
 	for (int i = 0; i < queue->size; i++)
 	{
 		for (int j = 0; j < queue->subArray[i].size; j++) //prolazimo kroz TOPIC_SUBSCRIBERS strukture
 		{
 			if (queue->subArray[i].subscribers[j] == acceptedSocket) {   //ako je to taj socket
-				int size = queue->subArray[i].size;						 //Logika brisanja iz reda
-				SOCKET temp = queue->subArray[i].subscribers[size]; 	 //Logika brisanja iz reda
-				if (temp != INV_SOCKET) {								 //Logika brisanja iz reda
-					queue->subArray[i].subscribers[size] = INV_SOCKET;	 //Logika brisanja iz reda
-					queue->subArray[i].subscribers[j] = temp;			 //Logika brisanja iz reda
-					queue->subArray[i].size--;							 //Logika brisanja iz reda
-				}														 //Logika brisanja iz reda
-				else {													 //Logika brisanja iz reda
-					queue->subArray[i].subscribers[j] = INV_SOCKET;		 //Logika brisanja iz reda
-					queue->subArray[i].size--;							 //Logika brisanja iz reda
+				int index = queue->subArray[i].size - 1;						 
+				SOCKET temp = queue->subArray[i].subscribers[index];
+				if (temp != INV_SOCKET) {								 
+					queue->subArray[i].subscribers[index] = INV_SOCKET;
+					queue->subArray[i].subscribers[j] = temp;			 
+					queue->subArray[i].size--;							 
+				}														 
+				else {													 
+					queue->subArray[i].subscribers[j] = INV_SOCKET;		 
+					queue->subArray[i].size--;							 
 				}
 
 			}
 		}
-
 	}
 
 	for (int i = 0; i < numberOfSubscribedSubs; i++)
 	{
 		if (subscribers[i].socket == acceptedSocket) {
-			subscribers[i].socket = 0;
+			subscribers[i].socket = INV_SOCKET;
 			SAFE_DELETE_HANDLE(subscribers[i].hSemaphore);
 			subscribers[i].hSemaphore = 0;
 		}

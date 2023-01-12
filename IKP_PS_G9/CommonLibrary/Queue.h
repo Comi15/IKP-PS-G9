@@ -4,6 +4,9 @@
 #include <WinSock2.h>
 #include "Structures.h"
 
+#pragma warning(disable:4267)
+#pragma warning(disable:4715)
+
 //red u kom se skladiste subsrciberi
 SUBSCRIBER_QUEUE* CreateSubQueue(int capacity) {
 	SUBSCRIBER_QUEUE* queue = (SUBSCRIBER_QUEUE*)malloc(sizeof(SUBSCRIBER_QUEUE));

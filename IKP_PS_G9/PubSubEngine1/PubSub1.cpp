@@ -9,7 +9,6 @@ SOCKET acceptedSockets[NUMBER_OF_CLIENTS];
 MESSAGE_QUEUE* messageQueue;
 DATA poppedMessage;
 
-int clientsCount = 0;
 bool pubsub2_running = true;
 
 HANDLE PublisherThreads[NUMBER_OF_CLIENTS];
@@ -146,7 +145,7 @@ DWORD WINAPI StopServer(LPVOID lpParam)
 
 			ReleaseSemaphore(pubSubSemaphore, 1, NULL);
 
-			for (int i = 0; i < clientsCount; i++) {
+			for (int i = 0; i < numberOfPublishers; i++) {
 				if (acceptedSockets[i] != -1) {
 					iResult = shutdown(acceptedSockets[i], SD_BOTH);
 					if (iResult == SOCKET_ERROR)
@@ -289,16 +288,16 @@ int main()
 	PubSubForwardThread = CreateThread(NULL, 0, &ForwardMessage, &connectSocket, 0, &PubSubForwardThreadID);
 	StopServerThread = CreateThread(NULL, 0, &StopServer, &connectSocket, 0, &StopServerThreadID);
 
-	while (clientsCount < NUMBER_OF_CLIENTS && pubsub2_running)
+	while (numberOfPublishers < NUMBER_OF_CLIENTS && pubsub2_running)
 	{
 		int selectResult = SelectFunction(listenSocket, 'r');
 		if (selectResult == -1) {
 			break;
 		}
 
-		acceptedSockets[clientsCount] = accept(listenSocket, NULL, NULL);
+		acceptedSockets[numberOfPublishers] = accept(listenSocket, NULL, NULL);
 
-		if (acceptedSockets[clientsCount] == INVALID_SOCKET)
+		if (acceptedSockets[numberOfPublishers] == INVALID_SOCKET)
 		{
 			printf("\naccept failed with error: %d\n", WSAGetLastError());
 			closesocket(listenSocket);
@@ -306,13 +305,13 @@ int main()
 			return 1;
 		}
 
-		Connect(acceptedSockets[clientsCount]);
-		PublisherThreads[clientsCount] = CreateThread(NULL, 0, &PublisherReceive, &publisherThreadArgument, 0, &PublisherThreadsID[clientsCount]);
+		Connect(acceptedSockets[numberOfPublishers]);
+		PublisherThreads[numberOfPublishers] = CreateThread(NULL, 0, &PublisherReceive, &publisherThreadArgument, 0, &PublisherThreadsID[numberOfPublishers]);
 		
-		clientsCount++;
+		numberOfPublishers++;
 	}
 
-	for (int i = 0; i < clientsCount; i++) {
+	for (int i = 0; i < numberOfPublishers; i++) {
 	
 		if (PublisherThreads[i])
 			WaitForSingleObject(PublisherThreads[i], INFINITE);
@@ -331,7 +330,7 @@ int main()
 	
 	DeleteCriticalSection(&message_queueAccess);
 
-	for (int i = 0; i < clientsCount; i++) {
+	for (int i = 0; i < numberOfPublishers; i++) {
 		SAFE_DELETE_HANDLE(PublisherThreads[i]);
 	}
 	

@@ -14,6 +14,7 @@
 #pragma comment (lib, "Ws2_32.lib")
 #pragma comment (lib, "Mswsock.lib")
 #pragma comment (lib, "AdvApi32.lib")
+#pragma warning(disable:4267)
 
 #define DEFAULT_PORT 27016
 #define SERVER_SLEEP_TIME 50

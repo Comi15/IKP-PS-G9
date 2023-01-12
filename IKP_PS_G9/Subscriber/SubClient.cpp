@@ -11,7 +11,7 @@ DWORD SendThreadId, RecvThreadId;
 DWORD WINAPI SubscriberSend(LPVOID lpParam) {
 
 	int iResult = 0;
-	int topics[5];
+	int topics[6];
 	int topicCount = 0;
 
 	SOCKET connectSocket = *(SOCKET*)lpParam;
@@ -21,6 +21,11 @@ DWORD WINAPI SubscriberSend(LPVOID lpParam) {
 		char input = _getch();
 
 		char* message = (char*)malloc(20 * sizeof(char));
+
+		if (message == NULL) {
+			printf("Unable to allocate memory for message.");
+			exit(0);
+		}
 
 		if (input == '1' || input == '2' || input == '3' || input == '4' || input == '5' || input == '6') {
 
@@ -169,7 +174,11 @@ int main()
 	if (SendThread)
 		WaitForSingleObject(SendThread, INFINITE);
 
+	if (RecvThread)
+		WaitForSingleObject(RecvThread, INFINITE);
+
 	SAFE_DELETE_HANDLE(SendThread);
+	SAFE_DELETE_HANDLE(RecvThread);
 	
 	closesocket(connectSocket);
 

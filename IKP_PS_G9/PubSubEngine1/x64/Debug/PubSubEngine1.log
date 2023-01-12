@@ -1,5 +1,1 @@
-﻿  PubSub1.cpp
-C:\Users\aleksandra\Desktop\ikp projekat\IKP-PS-G9\IKP_PS_G9\PubSubEngine1\PubSub1.h(54,46): warning C4267: 'initializing': conversion from 'size_t' to 'int', possible loss of data
-C:\Users\aleksandra\Desktop\ikp projekat\IKP-PS-G9\IKP_PS_G9\PubSubEngine1\PubSub1.cpp(115,40): warning C4267: 'initializing': conversion from 'size_t' to 'int', possible loss of data
-C:\Users\aleksandra\Desktop\ikp projekat\IKP-PS-G9\IKP_PS_G9\CommonLibrary\Queue.h(106): warning C4715: 'DequeueMessage': not all control paths return a value
-  PubSubEngine1.vcxproj -> C:\Users\aleksandra\Desktop\ikp projekat\IKP-PS-G9\IKP_PS_G9\x64\Debug\PubSubEngine1.exe
+﻿

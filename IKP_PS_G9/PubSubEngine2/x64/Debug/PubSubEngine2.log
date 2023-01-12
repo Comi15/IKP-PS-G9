@@ -1,12 +1,1 @@
-﻿  PubSub2.cpp
-C:\Users\aleksandra\Desktop\ikp projekat\IKP-PS-G9\IKP_PS_G9\PubSubEngine2\PubSub2.h(48,11): warning C4129: 'P': unrecognized character escape sequence
-C:\Users\aleksandra\Desktop\ikp projekat\IKP-PS-G9\IKP_PS_G9\PubSubEngine2\PubSub2.cpp(66,40): warning C4267: 'initializing': conversion from 'size_t' to 'int', possible loss of data
-C:\Users\aleksandra\Desktop\ikp projekat\IKP-PS-G9\IKP_PS_G9\PubSubEngine2\PubSub2.cpp(84,7): warning C4101: 'recvbuf': unreferenced local variable
-C:\Users\aleksandra\Desktop\ikp projekat\IKP-PS-G9\IKP_PS_G9\PubSubEngine2\PubSub2.cpp(204,16): warning C4996: 'strtok': This function or variable may be unsafe. Consider using strtok_s instead. To disable deprecation, use _CRT_SECURE_NO_WARNINGS. See online help for details.
-C:\Users\aleksandra\Desktop\ikp projekat\IKP-PS-G9\IKP_PS_G9\PubSubEngine2\PubSub2.cpp(207,10): warning C4996: 'strtok': This function or variable may be unsafe. Consider using strtok_s instead. To disable deprecation, use _CRT_SECURE_NO_WARNINGS. See online help for details.
-C:\Users\aleksandra\Desktop\ikp projekat\IKP-PS-G9\IKP_PS_G9\PubSubEngine2\PubSub2.cpp(217,11): warning C4996: 'strtok': This function or variable may be unsafe. Consider using strtok_s instead. To disable deprecation, use _CRT_SECURE_NO_WARNINGS. See online help for details.
-C:\Users\aleksandra\Desktop\ikp projekat\IKP-PS-G9\IKP_PS_G9\PubSubEngine2\PubSub2.cpp(341,7): warning C4101: 'recvbuf': unreferenced local variable
-C:\Users\aleksandra\Desktop\ikp projekat\IKP-PS-G9\IKP_PS_G9\CommonLibrary\Queue.h(106): warning C4715: 'DequeueMessage': not all control paths return a value
-C:\Users\aleksandra\Desktop\ikp projekat\IKP-PS-G9\IKP_PS_G9\PubSubEngine2\PubSub2.h(78): warning C4715: 'Connect': not all control paths return a value
-C:\Users\aleksandra\Desktop\ikp projekat\IKP-PS-G9\IKP_PS_G9\PubSubEngine2\PubSub2.h(127): warning C4715: 'SelectFunction': not all control paths return a value
-  PubSubEngine2.vcxproj -> C:\Users\aleksandra\Desktop\ikp projekat\IKP-PS-G9\IKP_PS_G9\x64\Debug\PubSubEngine2.exe
+﻿

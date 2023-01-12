@@ -1,12 +1,14 @@
 #include<stdio.h>
 #include "PubSub2.h"
 
+#pragma warning(disable:4996)
+
 CRITICAL_SECTION queueAccess;
 CRITICAL_SECTION message_queueAccess;
 bool serverStopped = false;
+int clients = 0;
 
 HANDLE pubSubSemaphore;
-
 
 SOCKET acceptedSocket;
 
@@ -39,8 +41,9 @@ DWORD WINAPI SubscriberSend(LPVOID lpParam)
 {
 	int iResult = 0;
 	THREAD_ARGUMENT argumentStructure = *(THREAD_ARGUMENT*)lpParam;
-
+	
 	while (pubsub2_running) {
+
 		for (int i = 0; i < numberOfSubscribedSubs; i++)
 		{
 			if (argumentStructure.socket == subscribers[i].socket) {
@@ -81,66 +84,15 @@ DWORD WINAPI SubscriberSend(LPVOID lpParam)
 //Funkcija koja se izvrsava u niti koja se kreira i pokrece za svakog pojedinacnog subscriber-a kada se on poveze
 //Koristi se za primanje poruka od subscriber-a i omogucava pretplatu na vise tema
 DWORD WINAPI SubscriberReceive(LPVOID lpParam) {
-	char recvbuf[DEFAULT_BUFLEN];
+
 	ThreadArgument argumentRecvStructure = *(ThreadArgument*)lpParam;
 	ThreadArgument argumentSendStructure = argumentRecvStructure;
-	argumentSendStructure.clientNumber = numberOfSubscribedSubs;
 
-	bool subscriberRunning = true;
+	bool subRunning = true;
+	bool subscribed = false;
 	char* recvRes;
 
-	recvRes = ReceiveFunction(argumentSendStructure.socket);
-
-	if (strcmp(recvRes, "ErrorC") && strcmp(recvRes, "ErrorR") && strcmp(recvRes, "ErrorS"))
-	{
-		if (!strcmp(recvRes, "shutdown")) {
-			printf("\nSubscriber %d disconnected.\n", argumentRecvStructure.clientNumber + 1);
-			subscribers[argumentSendStructure.clientNumber].running = false;
-			ReleaseSemaphore(subscribers[argumentSendStructure.clientNumber].hSemaphore, 1, NULL);
-			SubscriberShutDown(subQueue, argumentSendStructure.socket, subscribers);
-			acceptedSockets[argumentSendStructure.clientNumber] = -1;
-			free(recvRes);
-
-			return 1;
-		}
-		else {
-			HANDLE hSem = CreateSemaphore(0, 0, 1, NULL);
-
-			SUBSCRIBER subscriber;
-			subscriber.socket = argumentSendStructure.socket;
-			subscriber.hSemaphore = hSem;
-			subscriber.running = true;
-			subscribers[numberOfSubscribedSubs] = subscriber;
-
-			SubscriberSendThreads[numberOfSubscribedSubs] = CreateThread(NULL, 0, &SubscriberSend, &argumentSendStructure, 0, &SubscriberSendThreadsID[numberOfSubscribedSubs]);
-			numberOfSubscribedSubs++;
-
-			EnterCriticalSection(&queueAccess);
-			Subscribe(subQueue, argumentSendStructure.socket, recvRes);
-			LeaveCriticalSection(&queueAccess);
-			printf("\nSubscriber %d subscribed to topic: %s. \n", argumentRecvStructure.clientNumber + 1, recvRes);
-			free(recvRes);
-		}
-	}
-	else if (!strcmp(recvRes, "ErrorS")) {
-		free(recvRes);
-		return 1;
-	}
-	else if (!strcmp(recvRes, "ErrorC"))
-	{
-		printf("\nConnection with client closed.\n");
-		closesocket(argumentSendStructure.socket);
-		free(recvRes);
-	}
-	else if (!strcmp(recvRes, "ErrorR"))
-	{
-		printf("\nrecv failed with error: %d\n", WSAGetLastError());
-		closesocket(argumentSendStructure.socket);
-		free(recvRes);
-
-	}
-
-	while (subscriberRunning && pubsub2_running) {
+	while (pubsub2_running && subRunning) {
 
 		recvRes = ReceiveFunction(argumentSendStructure.socket);
 
@@ -148,21 +100,42 @@ DWORD WINAPI SubscriberReceive(LPVOID lpParam) {
 		{
 			if (!strcmp(recvRes, "shutdown")) {
 				printf("\nSubscriber %d disconnected.\n", argumentRecvStructure.clientNumber + 1);
-				subscribers[argumentSendStructure.clientNumber].running = false;
-				ReleaseSemaphore(subscribers[argumentSendStructure.clientNumber].hSemaphore, 1, NULL);
-				SubscriberShutDown(subQueue, argumentSendStructure.socket, subscribers);
-				subscriberRunning = false;
-				acceptedSockets[argumentSendStructure.clientNumber] = -1;
+				subRunning = false;
+
+				if (subscribed) {
+					subscribers[argumentSendStructure.clientNumber].running = false;
+					ReleaseSemaphore(subscribers[argumentSendStructure.clientNumber].hSemaphore, 1, NULL);
+					SubscriberShutDown(subQueue, argumentSendStructure.socket, subscribers);
+				}
+
+				acceptedSockets[argumentRecvStructure.clientNumber] = -1;
 				free(recvRes);
 				break;
 			}
+			else {
 
-			EnterCriticalSection(&queueAccess);
-			Subscribe(subQueue, argumentSendStructure.socket, recvRes);
-			LeaveCriticalSection(&queueAccess);
-			printf("\nSubscriber %d subscribed to topic: %s.\n", argumentRecvStructure.clientNumber + 1, recvRes);
-			free(recvRes);
+				if (!subscribed) {
+					HANDLE hSem = CreateSemaphore(0, 0, 1, NULL);
 
+					SUBSCRIBER subscriber;
+					subscriber.socket = argumentSendStructure.socket;
+					subscriber.hSemaphore = hSem;
+					subscriber.running = true;
+					subscribers[numberOfSubscribedSubs] = subscriber;
+
+					argumentSendStructure.clientNumber = numberOfSubscribedSubs;
+
+					SubscriberSendThreads[numberOfSubscribedSubs] = CreateThread(NULL, 0, &SubscriberSend, &argumentSendStructure, 0, &SubscriberSendThreadsID[numberOfSubscribedSubs]);
+					numberOfSubscribedSubs++;
+					subscribed = true;
+				}
+
+				EnterCriticalSection(&queueAccess);
+				Subscribe(subQueue, argumentSendStructure.socket, recvRes);
+				LeaveCriticalSection(&queueAccess);
+				printf("\nSubscriber %d subscribed to topic: %s. \n", argumentRecvStructure.clientNumber + 1, recvRes);
+				free(recvRes);
+			}
 		}
 		else if (!strcmp(recvRes, "ErrorS")) {
 			free(recvRes);
@@ -181,7 +154,6 @@ DWORD WINAPI SubscriberReceive(LPVOID lpParam) {
 			closesocket(argumentSendStructure.socket);
 			free(recvRes);
 			break;
-
 		}
 	}
 
@@ -315,6 +287,15 @@ DWORD WINAPI StopServer(LPVOID lpParam)
 				}
 			}
 
+			iResult = shutdown(acceptedSocket, SD_BOTH);
+			if (iResult == SOCKET_ERROR)
+			{
+				printf("\nshutdown failed with error: %d\n", WSAGetLastError());
+				closesocket(acceptedSocket);
+				return 1;
+			}
+			closesocket(acceptedSocket);
+
 			break;
 		}
 	}
@@ -337,8 +318,6 @@ int main()
 	SOCKET listenSocket = INVALID_SOCKET;
 
 	int iResult;
-
-	char recvbuf[DEFAULT_BUFLEN];
 
 	WSADATA wsaData;
 
@@ -421,9 +400,9 @@ int main()
 			break;
 		}
 
-		acceptedSocket = accept(listenSocket, NULL, NULL);
+		acceptedSockets[numberOfConnectedSubs] = accept(listenSocket, NULL, NULL);
 
-		if (acceptedSocket == INVALID_SOCKET)
+		if (acceptedSockets[numberOfConnectedSubs] == INVALID_SOCKET)
 		{
 			printf("\naccept failed with error: %d\n", WSAGetLastError());
 			closesocket(listenSocket);
@@ -431,8 +410,9 @@ int main()
 			return 1;
 		}
 
-		char* client = Connect(acceptedSocket);
+		char* client = Connect(acceptedSockets[numberOfConnectedSubs]);
 		if (!strcmp(client, "pubsub1")) {
+			acceptedSocket = acceptedSockets[numberOfConnectedSubs];
 			PubSub2ReceiveThread = CreateThread(NULL, 0, &Recieve, &acceptedSocket, 0, &PubSub2ReceiveThreadId);
 		}
 		else if (!strcmp(client, "sub")) {
@@ -486,8 +466,7 @@ int main()
 	SAFE_DELETE_HANDLE(StopServerThread);
 
 	SAFE_DELETE_HANDLE(pubSubSemaphore);
-	
-	closesocket(acceptedSocket);
+
 	closesocket(listenSocket);
 
 	free(subQueue->subArray);
